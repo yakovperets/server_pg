@@ -141,3 +141,14 @@ In the request body you will need to provide an object with the following keys a
 ```http
   DELETE /api/users/:id
 ```
+
+#### API for adding a product to a user
+
+```http
+  POST /api/users/add-product/:id?product=<<productName>>
+```
+
+#### Response
+
+Example for a response
+![Alt text](public/images//res.png)
