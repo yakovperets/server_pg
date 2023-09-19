@@ -9,13 +9,18 @@ import chalk from "chalk";
 import userValidation from "../models/joi/userValidation";
 import { getDataFromDummy } from "../../dataAccess/dummyjson";
 import { addDataToJsonPlaceHolder } from "../../dataAccess/jsonPlaceHolder";
+import {
+  getAllUsersFromMongo,
+  addToMongo,
+  getUserByIdFromMongo,
+  updateUserById,
+  deleteUserById,
+} from "../../dataAccess/mongodb";
 
 type UserResult = Promise<UserInterface | null>;
-
 export const getUsers = async () => {
   try {
-    const users = await getCollectionFromJsonFile("users");
-    if (!users) throw new Error("no users in the database");
+    const users = await getAllUsersFromMongo();
     return users;
   } catch (error) {
     console.log(chalk.redBright(error));
@@ -25,38 +30,18 @@ export const getUsers = async () => {
 
 export const getUser = async (userId: string) => {
   try {
-    const users = await getCollectionFromJsonFile("users");
-    if (users instanceof Error)
-      throw new Error("Oops... Could not get the users from the Database");
-
-    const userFromDB = users.find(
-      (user: Record<string, unknown>) => user._id === userId
-    );
-
-    if (!userFromDB) throw new Error("No user with this id in the database!");
-    return userFromDB;
+    const user = await getUserByIdFromMongo(userId);
+    return user;
   } catch (error) {
     console.log(chalk.redBright(error));
     return Promise.reject(error);
   }
 };
 
-export const register = async (user: UserInterface): UserResult => {
+export const register = async (user: UserInterface) => {
   try {
-    const users = await getCollectionFromJsonFile("users");
-    if (users instanceof Error)
-      throw new Error("Oops... Could not get the users from the Database");
-
-    const userRegistered = users.find(
-      (userInDB: Record<string, unknown>) => userInDB.email === user.email
-    );
-    if (userRegistered) throw new Error("This user is allready registered!");
-
-    user._id = uuid1();
-    user.password = generateUserPassword(user.password);
-    users.push({ ...user });
-    await modifyCollection("users", users);
-    return user;
+    const fidback = await addToMongo(user.email, user.password);
+    console.log(fidback);
   } catch (error) {
     console.log(chalk.redBright(error));
     return Promise.reject(error);
@@ -66,23 +51,10 @@ export const register = async (user: UserInterface): UserResult => {
 export const editUser = async (
   userId: string,
   userForUpdate: UserInterface
-): UserResult => {
+) => {
   try {
-    const users = await getCollectionFromJsonFile("users");
-    if (users instanceof Error)
-      throw new Error("Oops... Could not get the users from the Database");
-
-    const index = users.findIndex((user) => user._id === userId);
-    if (index === -1) throw new Error("Could not find user with this ID!");
-
-    const usersCopy = [...users];
-    const userToUpdate = { ...usersCopy[index], ...userForUpdate };
-    usersCopy[index] = userToUpdate;
-
-    const data = await modifyCollection("users", usersCopy);
-    if (!data)
-      throw new Error("Oops... something went wrong Could not Edit this user");
-    return userToUpdate;
+    const updateUser = await updateUserById(userId, userForUpdate);
+    return updateUser;
   } catch (error) {
     console.log(chalk.redBright(error));
     return Promise.reject(error);
@@ -91,18 +63,7 @@ export const editUser = async (
 
 export const deleteUser = async (userId: string) => {
   try {
-    const users = await getCollectionFromJsonFile("users");
-    if (users instanceof Error)
-      throw new Error("Oops... Could not get the users from the Database");
-
-    const user = users.find((user) => user._id === userId);
-    if (!user) throw new Error("Could not find user with this ID!");
-    const filteredUser = users.filter((user) => user._id !== userId);
-
-    const data = await modifyCollection("users", filteredUser);
-    if (!data)
-      throw new Error("Oops... something went wrong Could not Edit this user");
-
+    const user = await deleteUserById(userId);
     return user;
   } catch (error) {
     console.log(chalk.redBright(error));
@@ -155,17 +116,17 @@ export const addProductToUser = async (
           .includes(productFromClient.toLowerCase().trim())
     );
 
-    if (!productFromDB) throw new Error("Could not found this product");
-    user.product = productFromDB;
+    // if (!productFromDB) throw new Error("Could not found this product");
+    // user.product = productFromDB;
 
-    const userFromJsonPlaceHolder = await addDataToJsonPlaceHolder(
-      user,
-      "users"
-    );
-    if (!userFromJsonPlaceHolder)
-      throw new Error("Could not add this user to jsonplaceholder database");
+    // const userFromJsonPlaceHolder = await addDataToJsonPlaceHolder(
+    //   user,
+    //   "users"
+    // );
+    // if (!userFromJsonPlaceHolder)
+    //   throw new Error("Could not add this user to jsonplaceholder database");
 
-    return userFromJsonPlaceHolder;
+    // return userFromJsonPlaceHolder;
   } catch (error) {
     if (error && typeof error === "object" && "message" in error)
       console.log(chalk.redBright(error.message));

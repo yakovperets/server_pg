@@ -34,6 +34,7 @@ export const handleGetUser = async (req: Request, res: Response) => {
 export const handleUserRegistration = async (req: Request, res: Response) => {
   try {
     const user: UserInterface = req.body;
+    console.log(user);
 
     const { error } = userValidation(user);
     if (error?.details[0].message) throw new Error(error?.details[0].message);
